@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+    // The `up` method is called when the migration is run, and it creates the necessary tables and columns in the database. 
     public function up(): void
     {
+        // used to store cached data.
         Schema::create('cache', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->mediumText('value');
             $table->integer('expiration')->index();
         });
 
+        // manage locks for cache keys. 
         Schema::create('cache_locks', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->string('owner');
@@ -24,9 +24,7 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
+    // The `down` method is called when the migration is rolled back
     public function down(): void
     {
         Schema::dropIfExists('cache');

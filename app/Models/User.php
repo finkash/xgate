@@ -3,6 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+/*
+* `Database\Factories\UserFactory` - factory class that is used to generate instances of the `User` model for testing or seeding the database.
+* `...\Factories\HasFactory` - trait that provides factory-related methods to the model, allowing it to be used with Laravel's factory system.
+* `Illuminate\Foundation\Auth\User` - the base class for user authentication. The `User` model inherits features such as password hashing and remember token management.
+* `Illuminate\Notifications\Notifiable` - a trait that allows the `User` model to send notifications, such as email or database notifications, using Laravel's notification system.
+*/
+
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;

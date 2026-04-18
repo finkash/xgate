@@ -4,13 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/*
+* These tables are essential for managing and tracking the lifecycle of jobs in a Laravel application
+* allowing for efficient job processing, error handling, and batch management.
+*/
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        // used to store information about queued jobs
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->index();
@@ -21,6 +23,7 @@ return new class extends Migration
             $table->unsignedInteger('created_at');
         });
 
+        // used to store information about batches of jobs, including their status and any failed jobs associated with the batch.
         Schema::create('job_batches', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('name');
@@ -34,6 +37,10 @@ return new class extends Migration
             $table->integer('finished_at')->nullable();
         });
 
+        /*
+        * used to store information about failed jobs, including the connection and queue they were on, 
+        * the payload of the job, and the exception that caused the failure.
+        */
         Schema::create('failed_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
@@ -45,9 +52,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('jobs');
