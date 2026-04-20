@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\IdentityAndAccess\Actions\RegisterUserAction;
+use App\Domain\IdentityAndAccess\DTOs\RegisterUserDTO;
+
 // Represents the users in the application and is used for authentication and user management.
-use App\Models\User;
 
 // Used for handling HTTP responses and rendering views, respectively.
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +20,11 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly RegisterUserAction $registerUserAction
+    ) {
+    }
+
     public function showLogin(): View
     {
         // Returns the view located at `resources/views/auth/login.blade.php`, 
@@ -63,14 +70,8 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $user = User::create([
-            'name' => $validated['username'],
-            'username' => $validated['username'],
-            'email' => $validated['email'],
-            'password' => $validated['password'],
-        ]);
-
-        $user->profile()->create();
+        $dto = RegisterUserDTO::fromValidated($validated);
+        $user = $this->registerUserAction->execute($dto);
 
         Auth::login($user);
         $request->session()->regenerate();

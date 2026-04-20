@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Domain\IdentityAndAccess\Models\Profile;
+
 /*
 * `Database\Factories\UserFactory` - factory class that is used to generate instances of the `User` model for testing or seeding the database.
 * `...\Factories\HasFactory` - trait that provides factory-related methods to the model, allowing it to be used with Laravel's factory system.
