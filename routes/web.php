@@ -77,6 +77,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/users/{user}/follow', [FollowController::class, 'destroy'])->name('users.unfollow');
 
     Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
+    Route::patch('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
     Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
 
     Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name('posts.comments.index');

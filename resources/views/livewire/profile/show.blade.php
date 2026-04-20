@@ -155,11 +155,57 @@
 
     <section class="mt-6 space-y-4">
         @forelse($posts as $post)
-            <article class="rounded-2xl border border-cyan-300/30 bg-[#0e1530]/90 p-5 shadow-[0_0_20px_rgba(34,211,238,0.15)]" x-data="{ showComments: false }">
+            @php
+                $summary = $post->reaction_summary ?? [
+                    'like' => 0,
+                    'love' => 0,
+                    'laugh' => 0,
+                    'wow' => 0,
+                    'sad' => 0,
+                    'angry' => 0,
+                ];
+            @endphp
+
+            <article class="rounded-2xl border border-cyan-300/30 bg-[#0e1530]/90 p-5 shadow-[0_0_20px_rgba(34,211,238,0.15)]" x-data="{ showComments: false, showEditPostForm: false }">
                 <p class="text-xs text-cyan-300/80">{{ $post->created_at?->diffForHumans() }}</p>
                 <p class="mt-2 whitespace-pre-line text-sm text-cyan-50">{{ $post->content }}</p>
 
+                @if(auth()->id() === $post->user_id)
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button type="button" @click="showEditPostForm = !showEditPostForm" class="rounded-lg border border-cyan-300/45 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-cyan-200 hover:border-orange-300/70 hover:text-orange-200">
+                            Edit
+                        </button>
+
+                        <form method="POST" action="{{ route('posts.destroy', $post) }}">
+                            @csrf
+                            @method('DELETE')
+                            <input type="hidden" name="_redirect" value="1" />
+                            <button type="submit" class="rounded-lg border border-rose-300/50 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-rose-200 hover:bg-rose-500/15">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+
+                    <form x-cloak x-show="showEditPostForm" method="POST" action="{{ route('posts.update', $post) }}" class="mt-3 space-y-2">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="_redirect" value="1" />
+                        <textarea name="content" rows="3" class="w-full rounded-xl border border-cyan-300/35 bg-[#091226] px-4 py-3 text-sm text-cyan-50 outline-none transition focus:border-orange-300">{{ $post->content }}</textarea>
+                        <div class="flex justify-end">
+                            <button type="submit" class="rounded-lg border border-cyan-300/50 px-3 py-2 text-xs uppercase tracking-[0.14em] text-cyan-200 hover:border-orange-300/70 hover:text-orange-200">
+                                Save Post
+                            </button>
+                        </div>
+                    </form>
+                @endif
+
                 @include('livewire.components.media-gallery', ['media' => $post->media])
+
+                @include('livewire.components.reaction-bar', [
+                    'action' => route('posts.reactions.toggle', $post),
+                    'summary' => $summary,
+                    'currentReaction' => $post->current_user_reaction ?? null,
+                ])
 
                 <div class="mt-4 flex flex-wrap items-center gap-3 text-xs text-cyan-200/80">
                     <button type="button" @click="showComments = !showComments" class="rounded-lg border border-cyan-300/35 px-3 py-1.5 hover:border-orange-300/70 hover:text-orange-200">

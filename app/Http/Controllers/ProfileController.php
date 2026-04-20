@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Content\Models\Post;
+use App\Domain\Content\Services\FeedService;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,7 +11,7 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function show(User $user): View
+    public function show(User $user, FeedService $feedService): View
     {
         $user->load('profile');
 
@@ -24,6 +25,8 @@ class ProfileController extends Controller
             ->withCount(['comments', 'reactions'])
             ->orderByDesc('created_at')
             ->paginate(10);
+
+        $feedService->hydrateEngagementAttributes($posts->getCollection(), auth()->user());
 
         $followersCount = $user->followers()->count();
         $followingCount = $user->following()->count();

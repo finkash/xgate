@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Domain\Content\Models\Post;
 use App\Domain\Content\Models\PostMedia;
+use App\Domain\Engagement\Models\Comment;
+use App\Domain\Engagement\Models\Reaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -93,5 +95,107 @@ class PostCreationTest extends TestCase
         $response->assertSessionHasErrors('media');
 
         $this->assertDatabaseCount('post_media', 0);
+    }
+
+    public function test_user_can_update_own_post_text(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::query()->create([
+            'user_id' => $user->id,
+            'content' => 'Original post text',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->patchJson(route('posts.update', $post), [
+                'content' => 'Updated post text',
+            ]);
+
+        $response->assertOk()->assertJson([
+            'id' => $post->id,
+            'content' => 'Updated post text',
+        ]);
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'content' => 'Updated post text',
+        ]);
+    }
+
+    public function test_user_cannot_update_someone_elses_post(): void
+    {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+
+        $post = Post::query()->create([
+            'user_id' => $owner->id,
+            'content' => 'Owner content',
+        ]);
+
+        $this->actingAs($intruder)
+            ->patchJson(route('posts.update', $post), [
+                'content' => 'Hacked content',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'content' => 'Owner content',
+        ]);
+    }
+
+    public function test_user_can_delete_post_and_related_entities(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+
+        $post = Post::query()->create([
+            'user_id' => $owner->id,
+            'content' => 'Delete me',
+        ]);
+
+        $path = UploadedFile::fake()->create('clip.mp4', 100, 'video/mp4')->store('posts/'.$owner->id, 'public');
+        $media = PostMedia::query()->create([
+            'post_id' => $post->id,
+            'file_path' => $path,
+            'type' => 'video',
+            'display_order' => 0,
+            'alt_text' => null,
+        ]);
+
+        $comment = Comment::query()->create([
+            'post_id' => $post->id,
+            'user_id' => $other->id,
+            'content' => 'Comment to remove',
+        ]);
+
+        $post->reactions()->create([
+            'user_id' => $other->id,
+            'type' => 'like',
+        ]);
+
+        $comment->reactions()->create([
+            'user_id' => $owner->id,
+            'type' => 'love',
+        ]);
+
+        $this->actingAs($owner)
+            ->deleteJson(route('posts.destroy', $post))
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('posts', ['id' => $post->id]);
+        $this->assertDatabaseMissing('post_media', ['id' => $media->id]);
+        $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
+
+        $this->assertDatabaseMissing('reactions', [
+            'reactable_type' => $post->getMorphClass(),
+            'reactable_id' => (string) $post->id,
+        ]);
+
+        $this->assertDatabaseMissing('reactions', [
+            'reactable_type' => $comment->getMorphClass(),
+            'reactable_id' => (string) $comment->id,
+        ]);
     }
 }

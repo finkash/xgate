@@ -40,7 +40,7 @@
                 @include('livewire.components.reaction-bar', [
                     'action' => route('comments.reactions.toggle', [$post, $comment]),
                     'summary' => $comment->reaction_summary ?? [],
-                    'currentReaction' => null,
+                    'currentReaction' => $comment->current_user_reaction ?? null,
                 ])
 
                 <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -96,7 +96,7 @@
                                 @include('livewire.components.reaction-bar', [
                                     'action' => route('comments.reactions.toggle', [$post, $reply]),
                                     'summary' => $reply->reaction_summary ?? [],
-                                    'currentReaction' => null,
+                                    'currentReaction' => $reply->current_user_reaction ?? null,
                                 ])
 
                                 @if(auth()->id() === $reply->user_id)

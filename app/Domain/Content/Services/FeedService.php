@@ -9,6 +9,7 @@ use App\Domain\Engagement\Models\Reaction;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class FeedService
 {
@@ -47,6 +48,17 @@ class FeedService
             return $paginator;
         }
 
+        $this->hydrateEngagementAttributes($posts, $user);
+
+        return $paginator;
+    }
+
+    public function hydrateEngagementAttributes(Collection $posts, ?User $user = null): void
+    {
+        if ($posts->isEmpty()) {
+            return;
+        }
+
         $postIds = $posts->pluck('id');
 
         $counts = Reaction::query()
@@ -68,15 +80,28 @@ class FeedService
                 $byPost[$postId] = $this->emptyReactionSummary();
             }
 
-            $typeKey = $row->type instanceof ReactionType
-                ? $row->type->value
-                : (string) $row->type;
+            $typeKey = $this->reactionTypeValue($row->type);
 
             $byPost[$postId][$typeKey] = (int) $row->aggregate;
         }
 
-        $posts->transform(function (Post $post) use ($byPost): Post {
+        $currentByPost = [];
+        if ($user) {
+            $postReactions = Reaction::query()
+                ->select(['reactable_id', 'type'])
+                ->where('user_id', $user->id)
+                ->where('reactable_type', (new Post())->getMorphClass())
+                ->whereIn('reactable_id', $postIds)
+                ->get();
+
+            foreach ($postReactions as $row) {
+                $currentByPost[$row->reactable_id] = $this->reactionTypeValue($row->type);
+            }
+        }
+
+        $posts->transform(function (Post $post) use ($byPost, $currentByPost): Post {
             $post->setAttribute('reaction_summary', $byPost[$post->id] ?? $this->emptyReactionSummary());
+            $post->setAttribute('current_user_reaction', $currentByPost[$post->id] ?? null);
 
             return $post;
         });
@@ -110,25 +135,37 @@ class FeedService
                     $byComment[$commentId] = $this->emptyReactionSummary();
                 }
 
-                $typeKey = $row->type instanceof ReactionType
-                    ? $row->type->value
-                    : (string) $row->type;
+                $typeKey = $this->reactionTypeValue($row->type);
 
                 $byComment[$commentId][$typeKey] = (int) $row->aggregate;
             }
 
-            $posts->each(function (Post $post) use ($byComment): void {
-                $post->topLevelComments->each(function ($comment) use ($byComment): void {
-                    $comment->setAttribute('reaction_summary', $byComment[$comment->id] ?? $this->emptyReactionSummary());
+            $currentByComment = [];
+            if ($user) {
+                $commentReactions = Reaction::query()
+                    ->select(['reactable_id', 'type'])
+                    ->where('user_id', $user->id)
+                    ->where('reactable_type', (new Comment())->getMorphClass())
+                    ->whereIn('reactable_id', $commentIds)
+                    ->get();
 
-                    $comment->replies->each(function ($reply) use ($byComment): void {
+                foreach ($commentReactions as $row) {
+                    $currentByComment[$row->reactable_id] = $this->reactionTypeValue($row->type);
+                }
+            }
+
+            $posts->each(function (Post $post) use ($byComment, $currentByComment): void {
+                $post->topLevelComments->each(function ($comment) use ($byComment, $currentByComment): void {
+                    $comment->setAttribute('reaction_summary', $byComment[$comment->id] ?? $this->emptyReactionSummary());
+                    $comment->setAttribute('current_user_reaction', $currentByComment[$comment->id] ?? null);
+
+                    $comment->replies->each(function ($reply) use ($byComment, $currentByComment): void {
                         $reply->setAttribute('reaction_summary', $byComment[$reply->id] ?? $this->emptyReactionSummary());
+                        $reply->setAttribute('current_user_reaction', $currentByComment[$reply->id] ?? null);
                     });
                 });
             });
         }
-
-        return $paginator;
     }
 
     /**
@@ -143,5 +180,12 @@ class FeedService
         }
 
         return $summary;
+    }
+
+    private function reactionTypeValue(mixed $type): string
+    {
+        return $type instanceof ReactionType
+            ? $type->value
+            : (string) $type;
     }
 }
