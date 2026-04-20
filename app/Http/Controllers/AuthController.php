@@ -58,16 +58,19 @@ class AuthController extends Controller
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'username' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user = User::create([
             'name' => $validated['username'],
+            'username' => $validated['username'],
             'email' => $validated['email'],
             'password' => $validated['password'],
         ]);
+
+        $user->profile()->create();
 
         Auth::login($user);
         $request->session()->regenerate();
