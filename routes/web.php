@@ -5,6 +5,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +52,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('register.perform');
 });
 
+Route::get('/profiles/{user:username}', [ProfileController::class, 'show'])->name('profiles.show');
+
 Route::middleware('auth')->group(function () {
 
     /*
@@ -74,4 +77,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/posts/{post}/reactions', [ReactionController::class, 'togglePost'])->name('posts.reactions.toggle');
     Route::post('/posts/{post}/comments/{comment}/reactions', [ReactionController::class, 'toggleComment'])->name('comments.reactions.toggle');
+
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });

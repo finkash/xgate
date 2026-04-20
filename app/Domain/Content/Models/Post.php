@@ -37,6 +37,13 @@ class Post extends Model
         return $this->hasMany(Comment::class);
     }
 
+    public function topLevelComments(): HasMany
+    {
+        return $this->hasMany(Comment::class)
+            ->whereNull('parent_comment_id')
+            ->orderBy('created_at');
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(PostMedia::class);

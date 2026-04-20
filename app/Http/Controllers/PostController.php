@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Content\Actions\CreatePostAction;
 use App\Domain\Content\DTOs\CreatePostDTO;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ class PostController extends Controller
     ) {
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'content' => ['nullable', 'string'],
@@ -28,6 +29,10 @@ class PostController extends Controller
         );
 
         $post = $this->createPostAction->execute($request->user(), $dto);
+
+        if ($request->boolean('_redirect')) {
+            return redirect()->route('dashboard')->with('status', 'Post created successfully.');
+        }
 
         return response()->json([
             'id' => $post->id,

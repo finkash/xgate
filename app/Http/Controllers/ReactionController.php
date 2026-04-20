@@ -7,6 +7,7 @@ use App\Domain\Engagement\Actions\ToggleReactionAction;
 use App\Domain\Engagement\Enums\ReactionType;
 use App\Domain\Engagement\Models\Comment;
 use App\Domain\Engagement\Models\Reaction;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +19,7 @@ class ReactionController extends Controller
     ) {
     }
 
-    public function togglePost(Request $request, Post $post): JsonResponse
+    public function togglePost(Request $request, Post $post): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in(array_column(ReactionType::cases(), 'value'))],
@@ -28,6 +29,10 @@ class ReactionController extends Controller
         $counts = $this->toggleReactionAction->execute($request->user(), $post, $type);
         $current = $this->currentUserReactionType($request->user()->id, $post->getMorphClass(), (string) $post->id);
 
+        if ($request->boolean('_redirect')) {
+            return back()->with('status', 'Post reaction updated.');
+        }
+
         return response()->json([
             'reactable_type' => 'post',
             'reactable_id' => $post->id,
@@ -36,7 +41,7 @@ class ReactionController extends Controller
         ]);
     }
 
-    public function toggleComment(Request $request, Post $post, Comment $comment): JsonResponse
+    public function toggleComment(Request $request, Post $post, Comment $comment): JsonResponse|RedirectResponse
     {
         if ($comment->post_id !== $post->id) {
             abort(404);
@@ -49,6 +54,10 @@ class ReactionController extends Controller
         $type = ReactionType::from($validated['type']);
         $counts = $this->toggleReactionAction->execute($request->user(), $comment, $type);
         $current = $this->currentUserReactionType($request->user()->id, $comment->getMorphClass(), (string) $comment->id);
+
+        if ($request->boolean('_redirect')) {
+            return back()->with('status', 'Comment reaction updated.');
+        }
 
         return response()->json([
             'reactable_type' => 'comment',

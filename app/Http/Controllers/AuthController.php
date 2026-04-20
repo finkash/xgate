@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Content\Services\FeedService;
 use App\Domain\IdentityAndAccess\Actions\RegisterUserAction;
 use App\Domain\IdentityAndAccess\DTOs\RegisterUserDTO;
 
@@ -79,9 +80,16 @@ class AuthController extends Controller
         return redirect()->route('dashboard');
     }
 
-    public function dashboard(): View
+    public function dashboard(Request $request, FeedService $feedService): View
     {
-        return view('dashboard');
+        $user = $request->user();
+        $feed = $feedService->getFeed($user, 15);
+        $feedMode = $user->following()->exists() ? 'following' : 'discover';
+
+        return view('livewire.feed.index', [
+            'feed' => $feed,
+            'feedMode' => $feedMode,
+        ]);
     }
 
     public function logout(Request $request): RedirectResponse

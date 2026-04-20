@@ -8,6 +8,7 @@ use App\Domain\Engagement\Actions\DeleteCommentAction;
 use App\Domain\Engagement\Actions\UpdateCommentAction;
 use App\Domain\Engagement\DTOs\CreateCommentDTO;
 use App\Domain\Engagement\Models\Comment;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +35,7 @@ class CommentController extends Controller
         return response()->json($comments);
     }
 
-    public function store(Request $request, Post $post): JsonResponse
+    public function store(Request $request, Post $post): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:2000'],
@@ -44,10 +45,14 @@ class CommentController extends Controller
         $dto = CreateCommentDTO::fromValidated($validated);
         $comment = $this->createCommentAction->execute($request->user(), $post, $dto);
 
+        if ($request->boolean('_redirect')) {
+            return back()->with('status', 'Comment added.');
+        }
+
         return response()->json($comment->load('user.profile'), 201);
     }
 
-    public function update(Request $request, Post $post, Comment $comment): JsonResponse
+    public function update(Request $request, Post $post, Comment $comment): JsonResponse|RedirectResponse
     {
         if ($comment->post_id !== $post->id) {
             abort(404);
@@ -63,10 +68,14 @@ class CommentController extends Controller
 
         $updated = $this->updateCommentAction->execute($comment, $validated['content']);
 
+        if ($request->boolean('_redirect')) {
+            return back()->with('status', 'Comment updated.');
+        }
+
         return response()->json($updated);
     }
 
-    public function destroy(Request $request, Post $post, Comment $comment): JsonResponse
+    public function destroy(Request $request, Post $post, Comment $comment): JsonResponse|RedirectResponse
     {
         if ($comment->post_id !== $post->id) {
             abort(404);
@@ -77,6 +86,10 @@ class CommentController extends Controller
         }
 
         $this->deleteCommentAction->execute($comment);
+
+        if ($request->boolean('_redirect')) {
+            return back()->with('status', 'Comment deleted.');
+        }
 
         return response()->json([], 204);
     }
