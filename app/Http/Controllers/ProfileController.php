@@ -16,7 +16,11 @@ class ProfileController extends Controller
 
         $posts = Post::query()
             ->where('user_id', $user->id)
-            ->with(['media'])
+            ->with([
+                'media',
+                'topLevelComments.user.profile',
+                'topLevelComments.replies.user.profile',
+            ])
             ->withCount(['comments', 'reactions'])
             ->orderByDesc('created_at')
             ->paginate(10);
@@ -32,12 +36,26 @@ class ProfileController extends Controller
                 ->exists();
         }
 
+        $followers = $user->followers()
+            ->select('users.id', 'users.username')
+            ->with('profile')
+            ->orderBy('users.username')
+            ->get();
+
+        $following = $user->following()
+            ->select('users.id', 'users.username')
+            ->with('profile')
+            ->orderBy('users.username')
+            ->get();
+
         return view('livewire.profile.show', [
             'profileUser' => $user,
             'posts' => $posts,
             'followersCount' => $followersCount,
             'followingCount' => $followingCount,
             'isFollowing' => $isFollowing,
+            'followers' => $followers,
+            'following' => $following,
         ]);
     }
 

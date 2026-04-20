@@ -6,6 +6,8 @@ use App\Domain\Content\Models\Post;
 use App\Domain\Content\Models\PostMedia;
 use App\Domain\Engagement\Models\Comment;
 use App\Domain\Engagement\Models\Reaction;
+use App\Domain\IdentityAndAccess\Enums\SeedFirstName;
+use App\Domain\IdentityAndAccess\Enums\SeedLastName;
 use App\Domain\IdentityAndAccess\Models\Follow;
 use App\Domain\IdentityAndAccess\Models\Profile;
 use App\Models\User;
@@ -28,6 +30,7 @@ class SocialMediaDemoSeeder extends Seeder
         }
 
         $participants = User::query()->orderBy('id')->take($targetUsers)->get();
+        $this->refreshLegacySeedUserIdentities($participants);
 
         foreach ($participants as $user) {
             Profile::query()->firstOrCreate(
@@ -75,6 +78,23 @@ class SocialMediaDemoSeeder extends Seeder
         }
 
         $reactionTypes = ['like', 'love', 'laugh', 'wow', 'sad', 'angry'];
+        $commentTemplates = [
+            'This shot is amazing, love the mood.',
+            'Great post, thanks for sharing this.',
+            'The colors in this media are super clean.',
+            'I would love to know where this was taken.',
+            'This is exactly the kind of content I like.',
+            'Really nice composition and framing.',
+            'Awesome update, keep posting more like this.',
+        ];
+
+        $replyTemplates = [
+            'Totally agree with you on this.',
+            'Same here, this one is my favorite too.',
+            'Good point, I noticed that as well.',
+            'Thanks, that means a lot.',
+            'I had the same thought when I saw it.',
+        ];
 
         foreach ($posts as $post) {
             $commentAuthors = $participants->shuffle()->take(random_int(1, 3));
@@ -84,7 +104,7 @@ class SocialMediaDemoSeeder extends Seeder
                 $comment = Comment::query()->create([
                     'post_id' => $post->id,
                     'user_id' => $author->id,
-                    'content' => 'Comment from @'.$author->username,
+                    'content' => $commentTemplates[array_rand($commentTemplates)],
                 ]);
                 $topComments->push($comment);
 
@@ -94,7 +114,7 @@ class SocialMediaDemoSeeder extends Seeder
                         'post_id' => $post->id,
                         'user_id' => $replier->id,
                         'parent_comment_id' => $comment->id,
-                        'content' => 'Reply from @'.$replier->username,
+                        'content' => $replyTemplates[array_rand($replyTemplates)],
                     ]);
                 }
             }
@@ -138,19 +158,78 @@ class SocialMediaDemoSeeder extends Seeder
 
     private function createUsers(int $count): void
     {
-        $timestamp = now()->format('YmdHis');
-
         for ($i = 1; $i <= $count; $i++) {
-            $username = 'seed_'.$timestamp.'_'.$i;
+            ['name' => $fullName, 'username' => $username] = $this->generateIdentity();
 
             User::query()->create([
-                'name' => 'Seed User '.$i,
+                'name' => $fullName,
                 'username' => $username,
                 'email' => $username.'@example.com',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]);
         }
+    }
+
+    private function refreshLegacySeedUserIdentities(iterable $participants): void
+    {
+        foreach ($participants as $participant) {
+            if (! $participant instanceof User) {
+                continue;
+            }
+
+            $isLegacySeedName = str_starts_with((string) $participant->name, 'Seed User ');
+            $isLegacySeedUsername = (bool) preg_match('/^seed_\d+_\d+$/', (string) $participant->username);
+
+            if (! $isLegacySeedName && ! $isLegacySeedUsername) {
+                continue;
+            }
+
+            ['name' => $fullName, 'username' => $username] = $this->generateIdentity((string) $participant->id);
+
+            $participant->forceFill([
+                'name' => $fullName,
+                'username' => $username,
+                'email' => $username.'@example.com',
+            ])->save();
+        }
+    }
+
+    /**
+     * @return array{name: string, username: string}
+     */
+    private function generateIdentity(?string $ignoreUserId = null): array
+    {
+        $firstNames = array_map(static fn (SeedFirstName $name): string => $name->value, SeedFirstName::cases());
+        $lastNames = array_map(static fn (SeedLastName $name): string => $name->value, SeedLastName::cases());
+
+        $firstName = $firstNames[array_rand($firstNames)];
+        $lastName = $lastNames[array_rand($lastNames)];
+        $fullName = $firstName.' '.$lastName;
+
+        $baseHandle = strtolower(preg_replace('/[^a-z0-9]+/i', '_', $firstName.'_'.$lastName) ?? 'seed_user');
+        $baseHandle = trim($baseHandle, '_');
+        if ($baseHandle === '') {
+            $baseHandle = 'seed_user';
+        }
+
+        $username = $baseHandle;
+        $suffix = 2;
+
+        while (
+            User::query()
+                ->when($ignoreUserId !== null, static fn ($query) => $query->where('id', '!=', $ignoreUserId))
+                ->where('username', $username)
+                ->exists()
+        ) {
+            $username = $baseHandle.'_'.$suffix;
+            $suffix++;
+        }
+
+        return [
+            'name' => $fullName,
+            'username' => $username,
+        ];
     }
 
     private function attachVariedMedia(Post $post, int $index): void

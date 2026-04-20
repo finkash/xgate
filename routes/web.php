@@ -8,6 +8,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReactionController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 /*
 * Here is where you can register web routes for your application. 
@@ -53,6 +54,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/profiles/{user:username}', [ProfileController::class, 'show'])->name('profiles.show');
+
+Route::get('/media/{path}', function (string $path) {
+    $normalized = ltrim($path, '/');
+
+    abort_unless(Storage::disk('public')->exists($normalized), 404);
+
+    return response()->file(Storage::disk('public')->path($normalized));
+})->where('path', '.*')->name('media.show');
 
 Route::middleware('auth')->group(function () {
 

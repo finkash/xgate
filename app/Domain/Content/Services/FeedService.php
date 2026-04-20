@@ -28,7 +28,11 @@ class FeedService
             ->withCount('comments');
 
         if ($followedUserIds->isNotEmpty()) {
-            $query->whereIn('user_id', $followedUserIds)
+            $query
+                ->where(function ($builder) use ($followedUserIds, $user): void {
+                    $builder->whereIn('user_id', $followedUserIds)
+                        ->orWhere('user_id', $user->id);
+                })
                 ->orderByDesc('created_at');
         } else {
             $query->withCount('reactions as reactions_total')

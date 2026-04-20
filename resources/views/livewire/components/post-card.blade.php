@@ -11,9 +11,13 @@
     ];
 
     $avatar = $post->author->profile->avatar_path ?? null;
-    $avatarSrc = $avatar
-        ? (str_starts_with($avatar, 'http') ? $avatar : asset('storage/'.$avatar))
-        : null;
+    if ($avatar && str_starts_with($avatar, 'http')) {
+        $avatarSrc = $avatar;
+    } elseif ($avatar) {
+        $avatarSrc = route('media.show', ['path' => ltrim($avatar, '/')]);
+    } else {
+        $avatarSrc = null;
+    }
 @endphp
 
 <article class="rounded-2xl border border-cyan-300/30 bg-[#0e1530]/90 p-5 shadow-[0_0_20px_rgba(34,211,238,0.15)]">
@@ -28,7 +32,7 @@
             @endif
             <div>
                 <a href="{{ route('profiles.show', ['user' => $post->author->username]) }}" class="text-sm font-semibold text-cyan-100 hover:text-orange-200">
-                    @{{ $post->author->username }}
+                    {{ '@'.$post->author->username }}
                 </a>
                 <p class="text-xs text-cyan-300/80">{{ $post->created_at?->diffForHumans() }}</p>
             </div>
@@ -46,6 +50,7 @@
     @include('livewire.components.reaction-bar', [
         'action' => route('posts.reactions.toggle', $post),
         'summary' => $summary,
+        'currentReaction' => null,
     ])
 
     @include('livewire.components.comment-thread', [

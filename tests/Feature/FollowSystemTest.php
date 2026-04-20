@@ -91,4 +91,38 @@ class FollowSystemTest extends TestCase
             'following_id' => $target->id,
         ]);
     }
+
+    public function test_unfollow_does_not_remove_reverse_follow_relation(): void
+    {
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+
+        Follow::query()->create([
+            'follower_id' => $userA->id,
+            'following_id' => $userB->id,
+        ]);
+
+        Follow::query()->create([
+            'follower_id' => $userB->id,
+            'following_id' => $userA->id,
+        ]);
+
+        $this->actingAs($userA)
+            ->deleteJson(route('users.unfollow', $userB))
+            ->assertOk()
+            ->assertJson([
+                'following' => false,
+                'deleted' => true,
+            ]);
+
+        $this->assertDatabaseMissing('follows', [
+            'follower_id' => $userA->id,
+            'following_id' => $userB->id,
+        ]);
+
+        $this->assertDatabaseHas('follows', [
+            'follower_id' => $userB->id,
+            'following_id' => $userA->id,
+        ]);
+    }
 }

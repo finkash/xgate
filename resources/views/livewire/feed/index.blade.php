@@ -7,10 +7,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <p class="text-xs uppercase tracking-[0.32em] text-orange-300">xgate social</p>
-                <h1 class="mt-1 text-3xl font-black uppercase tracking-[0.06em] text-cyan-200">Neon Feed</h1>
-                <p class="mt-2 text-sm text-cyan-100/80">
-                    Mode: <span class="font-semibold text-orange-200">{{ $feedMode === 'following' ? 'Following' : 'Discover' }}</span>
-                </p>
+                <h1 class="mt-1 text-3xl font-black uppercase tracking-[0.06em] text-cyan-200">{{ '@'.auth()->user()->username }}</h1>
             </div>
 
             <div class="flex items-center gap-2">
