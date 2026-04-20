@@ -5,6 +5,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\ReactionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -70,4 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
     Route::patch('/posts/{post}/comments/{comment}', [CommentController::class, 'update'])->name('posts.comments.update');
     Route::delete('/posts/{post}/comments/{comment}', [CommentController::class, 'destroy'])->name('posts.comments.destroy');
+
+    Route::post('/posts/{post}/reactions', [ReactionController::class, 'togglePost'])->name('posts.reactions.toggle');
+    Route::post('/posts/{post}/comments/{comment}/reactions', [ReactionController::class, 'toggleComment'])->name('comments.reactions.toggle');
 });
