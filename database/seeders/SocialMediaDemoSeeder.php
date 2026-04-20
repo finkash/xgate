@@ -17,9 +17,29 @@ use Illuminate\Support\Facades\Hash;
 
 class SocialMediaDemoSeeder extends Seeder
 {
+    /**
+     * @var array<int, array{name: string, username: string, email: string, password: string}>
+     */
+    private array $demoCredentials = [
+        [
+            'name' => 'Demo User',
+            'username' => 'demo_user',
+            'email' => 'demo@example.com',
+            'password' => 'password',
+        ],
+        [
+            'name' => 'Guest User',
+            'username' => 'guest_user',
+            'email' => 'guest@example.com',
+            'password' => 'password',
+        ],
+    ];
+
     public function run(): void
     {
         $this->resetSocialTables();
+
+        $this->ensureDemoUsers();
 
         $targetUsers = 12;
         $existingUsers = User::query()->count();
@@ -29,7 +49,20 @@ class SocialMediaDemoSeeder extends Seeder
             $this->createUsers($missingUsers);
         }
 
-        $participants = User::query()->orderBy('id')->take($targetUsers)->get();
+        $demoUsers = User::query()
+            ->whereIn('email', array_column($this->demoCredentials, 'email'))
+            ->orderByRaw("case when email = 'demo@example.com' then 0 when email = 'guest@example.com' then 1 else 2 end")
+            ->get();
+
+        $remainingSlots = max(0, $targetUsers - $demoUsers->count());
+
+        $otherUsers = User::query()
+            ->whereNotIn('id', $demoUsers->pluck('id'))
+            ->orderBy('id')
+            ->take($remainingSlots)
+            ->get();
+
+        $participants = $demoUsers->concat($otherUsers)->values();
         $this->refreshLegacySeedUserIdentities($participants);
 
         foreach ($participants as $user) {
@@ -168,6 +201,21 @@ class SocialMediaDemoSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]);
+        }
+    }
+
+    private function ensureDemoUsers(): void
+    {
+        foreach ($this->demoCredentials as $demoUser) {
+            User::query()->updateOrCreate(
+                ['email' => $demoUser['email']],
+                [
+                    'name' => $demoUser['name'],
+                    'username' => $demoUser['username'],
+                    'password' => Hash::make($demoUser['password']),
+                    'email_verified_at' => now(),
+                ]
+            );
         }
     }
 
