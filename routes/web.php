@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FollowController;
+use App\Http\Controllers\PostController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,4 +60,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/users/{user}/follow', [FollowController::class, 'store'])->name('users.follow');
     Route::delete('/users/{user}/follow', [FollowController::class, 'destroy'])->name('users.unfollow');
+
+    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
 });

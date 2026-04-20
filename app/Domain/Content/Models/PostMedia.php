@@ -2,6 +2,7 @@
 
 namespace App\Domain\Content\Models;
 
+use App\Domain\Content\Enums\MediaType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,18 @@ class PostMedia extends Model
         'display_order',
         'alt_text',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'type' => MediaType::class,
+        ];
+    }
 
     public function post(): BelongsTo
     {
